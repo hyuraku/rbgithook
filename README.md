@@ -1,6 +1,6 @@
 # Rbgithook
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/rbgithook`. To experiment with that code, run `bin/console` for an interactive prompt.
+Simple Git hook made by Ruby
 
 ## Installation
 
@@ -22,8 +22,8 @@ Or install it yourself as:
 
 ```
 rbgithook install
-rbgithook <file> <cmd> ex. rbgithook pre-commit "rspec spec/"
-rbgithook
+rbgithook add <file> <cmd> ex. rbgithook add pre-commit "rspec spec/"
+rbgithook uninstall
 ```
 
 ## Contributing
