@@ -20,6 +20,11 @@ Or install it yourself as:
 
 ## Usage
 
+```
+rbgithook install
+rbgithook <file> <cmd> ex. rbgithook pre-commit "rspec spec/"
+rbgithook
+```
 
 ## Contributing
 
