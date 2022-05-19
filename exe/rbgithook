@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+
+require "rbgithook"
+require "fileutils"
+
+command = ARGV[0]
+args = ARGV[1..]
+
+if command == "add"
+  Rbgithook.add(args)
+else
+  Rbgithook.send(command)
+end
+
