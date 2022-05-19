@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email = ["32809703+hyuraku@users.noreply.github.com"]
 
   spec.summary = "Git hook by Ruby"
-  spec.description = "Git hook by Ruby"
+  spec.description = "Simple Git hook made by Ruby"
   spec.homepage = "https://github.com/hyuraku/rbgithook"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 2.6.0"
