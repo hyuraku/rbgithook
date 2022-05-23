@@ -22,7 +22,8 @@ Or install it yourself as:
 
 ```
 rbgithook install
-rbgithook add <file> <cmd> ex. rbgithook add pre-commit "rspec spec/"
+rbgithook set <file> <cmd> ex. rbgithook add pre-commit "rspec spec/"
+rbgithook add <file> <cmd> ex. rbgithook add pre-commit "rubocop -a"
 rbgithook uninstall
 ```
 
