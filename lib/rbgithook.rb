@@ -10,13 +10,27 @@ module Rbgithook
     system("git", "config", "core.hooksPath", dir)
   end
 
-  def self.add(args)
+  def self.set(args)
     file_name = args[0]
     hook_command = args[1]
     Dir.chdir(".rbgithook")
     file = File.open(file_name.to_s, "w")
+    file.write("#!/usr/bin/env sh\n")
     file.write(hook_command)
     FileUtils.chmod(0o755, file_name)
+  end
+
+  def self.add(args)
+    file_name = args[0]
+    hook_command = args[1]
+    Dir.chdir(".rbgithook")
+    if File.exist?(file_name)
+      file = File.open(file_name.to_s, "a")
+      file.write("\n#{hook_command}")
+      FileUtils.chmod(0o755, file_name)
+    else
+      warn "File not found, please run `rbgithook set #{file_name} #{hook_command}`"
+    end
   end
 
   def self.uninstall
