@@ -4,10 +4,16 @@ require "rbgithook"
 require "fileutils"
 
 command = ARGV[0]
-args = ARGV[1..]
 
 if %w[add set].include?(command)
+  args = ARGV[1..]
   Rbgithook.send(command, args)
 else
-  Rbgithook.send(command)
+  begin
+    Rbgithook.send(command)
+  rescue NoMethodError => e
+    puts "Unknown command: #{command}\n"
+
+    Rbgithook.help
+  end  
 end
