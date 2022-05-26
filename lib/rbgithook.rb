@@ -36,4 +36,18 @@ module Rbgithook
   def self.uninstall
     system("git", "config", "--unset", "core.hooksPath")
   end
+
+  def self.help
+    puts <<~USAGE
+
+    bgithook [command] {file} {command}
+
+    install - Install hook
+    set {file} {command} - Set a hook
+    add {file} {command} - Add a hook
+    uninstall - Uninstall hook
+    help   - Show this usage
+    USAGE
+  end
+
 end
