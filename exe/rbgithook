@@ -11,9 +11,9 @@ if %w[add set].include?(command)
 else
   begin
     Rbgithook.send(command)
-  rescue NoMethodError => e
-    puts "Unknown command: #{command}\n"
+  rescue NoMethodError => _
+    puts "Unknown command: #{command}\n\n"
 
     Rbgithook.help
-  end  
+  end
 end
