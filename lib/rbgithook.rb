@@ -15,8 +15,7 @@ module Rbgithook
     hook_command = args[1]
     Dir.chdir(".rbgithook")
     file = File.open(file_name.to_s, "w")
-    file.write("#!/usr/bin/env sh\n")
-    file.write(hook_command)
+    file.write("#!/usr/bin/env sh\n#{hook_command}")
     FileUtils.chmod(0o755, file_name)
   end
 
