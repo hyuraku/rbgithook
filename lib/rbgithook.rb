@@ -52,8 +52,6 @@ module Rbgithook
     USAGE
   end
 
-  private
-
   def self.warning_message(target, file_name, hook_command)
     warn "#{target} not found, please run `rbgithook set #{file_name} '#{hook_command}'`"
   end
