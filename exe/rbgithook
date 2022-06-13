@@ -5,6 +5,12 @@ require "fileutils"
 
 command = ARGV[0]
 
+if command.nil?
+  warn "Please specify a command to run\n\n"
+  Rbgithook.help
+  exit 1
+end
+
 cmds = {
   "install" => ->(_) { Rbgithook.install },
   "set" => ->(args) { Rbgithook.set(args) },
