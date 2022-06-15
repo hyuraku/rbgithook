@@ -1,3 +1,4 @@
+<img src="https://img.shields.io/github/license/hyuraku/rbgithook.svg"> <img src="https://img.shields.io/gem/v/rbgithook.svg">
 # Rbgithook
 
 Simple Git hook made by Ruby
