@@ -58,7 +58,7 @@ module Rbgithook
 
   def self.help
     puts <<~USAGE
-      bgithook [command] {file} {command}
+      rbgithook [command] {file} {command}
 
       install - Install hook
       set {file} {command} - Set a hook
