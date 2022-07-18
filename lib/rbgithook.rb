@@ -3,11 +3,12 @@
 require_relative "rbgithook/version"
 
 module Rbgithook
-  def self.install
-    dir = ".rbgithook"
-    FileUtils.mkdir(dir) unless Dir.exist?(dir)
+  DIRNAME = ".rbgithook"
 
-    system("git", "config", "core.hooksPath", dir)
+  def self.install
+    FileUtils.mkdir(DIRNAME) unless Dir.exist?(DIRNAME)
+
+    system("git", "config", "core.hooksPath", DIRNAME)
   end
 
   def self.set(args)
@@ -21,7 +22,7 @@ module Rbgithook
       warn "Please specify a command to run"
       exit 1
     end
-    Dir.chdir(".rbgithook")
+    Dir.chdir(DIRNAME)
     file = File.open(file_name.to_s, "w")
     file.write("#!/usr/bin/env sh\n#{hook_command}")
     FileUtils.chmod(0o755, file_name)
@@ -38,12 +39,11 @@ module Rbgithook
       warn "Please specify a command to run"
       exit 1
     end
-    dir_name = ".rbgithook"
-    unless Dir.exist?(dir_name)
+    unless Dir.exist?(DIRNAME)
       warning_message("Directory", file_name, hook_command)
       exit 1
     end
-    Dir.chdir(dir_name)
+    Dir.chdir(DIRNAME)
     if File.exist?(file_name)
       file = File.open(file_name.to_s, "a")
       file.write("\n#{hook_command}")
