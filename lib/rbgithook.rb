@@ -12,16 +12,8 @@ module Rbgithook
   end
 
   def self.set(args)
-    file_name = args[0]
-    if file_name.nil?
-      warn "Please specify a file to hook"
-      exit 1
-    end
-    hook_command = args[1]
-    if hook_command.nil?
-      warn "Please specify a command to run"
-      exit 1
-    end
+    file_name = get_file_name(args[0])
+    hook_command = get_hook_command(args[1])
     Dir.chdir(DIRNAME)
     file = File.open(file_name.to_s, "w")
     file.write("#!/usr/bin/env sh\n#{hook_command}")
@@ -29,16 +21,8 @@ module Rbgithook
   end
 
   def self.add(args)
-    file_name = args[0]
-    if file_name.nil?
-      warn "Please specify a file to hook"
-      exit 1
-    end
-    hook_command = args[1]
-    if hook_command.nil?
-      warn "Please specify a command to run"
-      exit 1
-    end
+    file_name = get_file_name(args[0])
+    hook_command = get_hook_command(args[1])
     unless Dir.exist?(DIRNAME)
       warning_message("Directory", file_name, hook_command)
       exit 1
@@ -70,5 +54,21 @@ module Rbgithook
 
   def self.warning_message(target, file_name, hook_command)
     warn "#{target} not found, please run `rbgithook set #{file_name} '#{hook_command}'`"
+  end
+
+  def self.get_file_name(file_name)
+    if file_name.nil?
+      warn "Please specify a file to hook"
+      exit 1
+    end
+    file_name
+  end
+
+  def self.get_hook_command(hook_command)
+    if hook_command.nil?
+      warn "Please specify a command to run"
+      exit 1
+    end
+    hook_command
   end
 end
