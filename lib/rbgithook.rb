@@ -29,7 +29,7 @@ module Rbgithook
       exit 1
     end
     Dir.chdir(DIRNAME)
-    if File.exist?(file_name)      
+    if File.exist?(file_name)
       File.open(file_name.to_s, "a") do |file|
         file.write("\n#{hook_command}")
       end
