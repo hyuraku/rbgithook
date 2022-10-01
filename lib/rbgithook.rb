@@ -15,8 +15,9 @@ module Rbgithook
     file_name = get_file_name(args[0])
     hook_command = get_hook_command(args[1])
     Dir.chdir(DIRNAME)
-    file = File.open(file_name.to_s, "w")
-    file.write("#!/usr/bin/env sh\n#{hook_command}")
+    File.open(file_name.to_s, "w") do |file|
+      file.write("#!/usr/bin/env sh\n#{hook_command}")
+    end
     FileUtils.chmod(0o755, file_name)
   end
 
@@ -28,9 +29,10 @@ module Rbgithook
       exit 1
     end
     Dir.chdir(DIRNAME)
-    if File.exist?(file_name)
-      file = File.open(file_name.to_s, "a")
-      file.write("\n#{hook_command}")
+    if File.exist?(file_name)      
+      File.open(file_name.to_s, "a") do |file|
+        file.write("\n#{hook_command}")
+      end
     else
       warning_message("File", file_name, hook_command)
     end
