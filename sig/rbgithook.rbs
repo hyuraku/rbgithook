@@ -1,0 +1,16 @@
+# TypeProf 0.21.3
+
+# Classes
+module Rbgithook
+  VERSION: String
+  DIRNAME: String
+
+  def self.install: -> void
+  def self.set: (untyped args) -> untyped
+  def self.add: (untyped args) -> untyped
+  def self.uninstall: -> void
+  def self.help: -> void
+  def self.warning_message: (String target, String file_name, String hook_command) -> void
+  def self.get_file_name: (String file_name) -> untyped
+  def self.get_hook_command: (String hook_command) -> untyped
+end
