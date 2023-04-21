@@ -50,7 +50,8 @@ module Rbgithook
     file_path = "#{DIRNAME}/#{file_name}"
     mode = append ? 'a' : 'w'
     File.open(file_path, mode) do |file|
-      file.write("#!/usr/bin/env sh\n#{hook_command}")
+      file.write("#!/usr/bin/env sh\n\n") if !append
+      file.write("#{hook_command}\n")
     end
     FileUtils.chmod(0o755, file_path)
   end
