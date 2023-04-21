@@ -2,9 +2,9 @@
 
 require "rbgithook"
 
-command = ARGV[0]
+command = ARGV.shift
 
-if command.nil?
+unless command
   warn "Please specify a command to run\n\n"
   Rbgithook.help
   exit 1
@@ -18,4 +18,4 @@ cmds = {
   "help" => ->(_) { Rbgithook.help }
 }
 
-cmds.key?(command) ? cmds[command].call(ARGV[1..]) : Rbgithook.help
+cmds[command] ? cmds[command].call(ARGV) : Rbgithook.help

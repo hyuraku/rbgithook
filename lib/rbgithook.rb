@@ -7,36 +7,20 @@ module Rbgithook
   DIRNAME = ".rbgithook"
 
   def self.install
-    FileUtils.mkdir(DIRNAME) unless Dir.exist?(DIRNAME)
-
+    FileUtils.mkdir_p(DIRNAME)
     system("git", "config", "core.hooksPath", DIRNAME)
   end
 
   def self.set(args)
-    file_name = get_file_name(args[0])
-    hook_command = get_hook_command(args[1])
-    Dir.chdir(DIRNAME)
-    File.open(file_name.to_s, "w") do |file|
-      file.write("#!/usr/bin/env sh\n#{hook_command}")
-    end
-    FileUtils.chmod(0o755, file_name)
+    file_name, hook_command = args
+    check_dir_existence
+    write_hook_to_file(file_name, hook_command)
   end
 
   def self.add(args)
-    file_name = get_file_name(args[0])
-    hook_command = get_hook_command(args[1])
-    unless Dir.exist?(DIRNAME)
-      warning_message("Directory", file_name, hook_command)
-      exit 1
-    end
-    Dir.chdir(DIRNAME)
-    if File.exist?(file_name)
-      File.open(file_name.to_s, "a") do |file|
-        file.write("\n#{hook_command}")
-      end
-    else
-      warning_message("File", file_name, hook_command)
-    end
+    file_name, hook_command = args
+    check_dir_existence
+    write_hook_to_file(file_name, hook_command, append: true)
   end
 
   def self.uninstall
@@ -55,23 +39,20 @@ module Rbgithook
     USAGE
   end
 
-  def self.warning_message(target, file_name, hook_command)
-    warn "#{target} not found, please run `rbgithook set #{file_name} '#{hook_command}'`"
+  def self.check_dir_existence
+    return if Dir.exist?(DIRNAME)
+
+    warn "Directory #{DIRNAME} not found, please run `rbgithook set {file} {command}`"
+    exit 1
   end
 
-  def self.get_file_name(file_name)
-    if file_name.nil?
-      warn "Please specify a file to hook"
-      exit 1
+  def self.write_hook_to_file(file_name, hook_command, append: false)
+    file_path = "#{DIRNAME}/#{file_name}"
+    mode = append ? "a" : "w"
+    File.open(file_path, mode) do |file|
+      file.write("#!/usr/bin/env sh\n\n") unless append
+      file.write("#{hook_command}\n")
     end
-    file_name
-  end
-
-  def self.get_hook_command(hook_command)
-    if hook_command.nil?
-      warn "Please specify a command to run"
-      exit 1
-    end
-    hook_command
+    FileUtils.chmod(0o755, file_path)
   end
 end
