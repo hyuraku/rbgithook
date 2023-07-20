@@ -1,11 +1,9 @@
 name: Ruby
 
 on:
-  push:
-    branches:
-      - master
-
   pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -27,3 +25,5 @@ jobs:
         bundler-cache: true
     - name: Run the default task
       run: bundle exec rake
+    - name: Test the module
+      run: bundle exec rspec
