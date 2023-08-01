@@ -23,7 +23,7 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
-    - name: Run the default task
-      run: bundle exec rake
+    - name: Check for style guide violations
+      run: bundle exec rubocop
     - name: Test the module
       run: bundle exec rspec
