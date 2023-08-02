@@ -27,6 +27,18 @@ module Rbgithook
     system("git", "config", "--unset", "core.hooksPath")
   end
 
+  def self.list
+    executable_files = Dir.glob(File.join(DIRNAME, "*")).select do |file|
+      File.file?(file) && File.executable?(file)
+    end
+
+    hooks = executable_files.map { |file| File.basename(file) }
+
+    hooks.each do |hook|
+      puts hook
+    end
+  end
+
   def self.help
     puts <<~USAGE
       rbgithook [command] {file} {command}
@@ -34,6 +46,7 @@ module Rbgithook
       install - Install hook
       set {file} {command} - Set a hook
       add {file} {command} - Add a hook
+      list - List hooks
       uninstall - Uninstall hook
       help   - Show this usage
     USAGE

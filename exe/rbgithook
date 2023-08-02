@@ -14,6 +14,7 @@ cmds = {
   "install" => ->(_) { Rbgithook.install },
   "set" => ->(args) { Rbgithook.set(args) },
   "add" => ->(args) { Rbgithook.add(args) },
+  "list" => ->(_) { Rbgithook.list },
   "uninstall" => ->(_) { Rbgithook.uninstall },
   "help" => ->(_) { Rbgithook.help }
 }
