@@ -49,46 +49,71 @@ RSpec.describe Rbgithook do
     end
   end
 
-  describe ".validate_arguments" do
-    it "should raise error for empty file name" do
-      expect { Rbgithook.validate_arguments("", "rubocop") }.to raise_error(ArgumentError, "File name cannot be empty")
-      expect { Rbgithook.validate_arguments(nil, "rubocop") }.to raise_error(ArgumentError, "File name cannot be empty")
+    describe ".validate_arguments" do
+      it "should raise error for empty file name" do
+        expect { Rbgithook.validate_arguments("", "rubocop") }.to raise_error(ArgumentError, "File name cannot be empty")
+        expect { Rbgithook.validate_arguments(nil, "rubocop") }.to raise_error(ArgumentError, "File name cannot be empty")
+      end
+
+      it "should raise error for path traversal attempts" do
+        expect { Rbgithook.validate_arguments("../evil", "rubocop") }.to raise_error(ArgumentError, "File name cannot contain path separators or traversal patterns")
+        expect { Rbgithook.validate_arguments("path/traversal", "rubocop") }.to raise_error(ArgumentError, "File name cannot contain path separators or traversal patterns")
+      end
+
+      it "should raise error for invalid file name characters" do
+        expect { Rbgithook.validate_arguments("file@name", "rubocop") }.to raise_error(ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores")
+        expect { Rbgithook.validate_arguments("file name", "rubocop") }.to raise_error(ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores")
+      end
+
+      it "should raise error for empty hook command" do
+        expect { Rbgithook.validate_arguments("pre-commit", "") }.to raise_error(ArgumentError, "Hook command cannot be empty")
+        expect { Rbgithook.validate_arguments("pre-commit", nil) }.to raise_error(ArgumentError, "Hook command cannot be empty")
+      end
+
+      it "should raise error for dangerous characters in hook command" do
+        expect { Rbgithook.validate_arguments("pre-commit", "rm -rf /; echo safe") }.to raise_error(ArgumentError, /Hook command contains potentially dangerous characters/)
+        expect { Rbgithook.validate_arguments("pre-commit", "echo `whoami`") }.to raise_error(ArgumentError, /Hook command contains potentially dangerous characters/)
+        expect { Rbgithook.validate_arguments("pre-commit", "command && rm -rf /") }.to raise_error(ArgumentError, /Hook command contains potentially dangerous characters/)
+      end
+
+      it "should raise error for multiline commands" do
+        expect { Rbgithook.validate_arguments("pre-commit", "rubocop\nrm -rf /") }.to raise_error(ArgumentError, "Hook command cannot contain newline characters")
+        expect { Rbgithook.validate_arguments("pre-commit", "rubocop\r\nrm -rf /") }.to raise_error(ArgumentError, "Hook command cannot contain newline characters")
+      end
+
+      it "should allow valid arguments" do
+        expect { Rbgithook.validate_arguments("pre-commit", "rubocop -a") }.not_to raise_error
+        expect { Rbgithook.validate_arguments("pre_push", "bundle exec rspec") }.not_to raise_error
+        expect { Rbgithook.validate_arguments("commit-msg", "echo testing") }.not_to raise_error
+      end
     end
 
-    it "should raise error for path traversal attempts" do
-      expect { Rbgithook.validate_arguments("../evil", "rubocop") }.to raise_error(ArgumentError, "File name cannot contain path separators or traversal patterns")
-      expect { Rbgithook.validate_arguments("path/traversal", "rubocop") }.to raise_error(ArgumentError, "File name cannot contain path separators or traversal patterns")
+    describe ".validate_file_name" do
+      it "should raise error for empty file name" do
+        expect { Rbgithook.validate_file_name("") }.to raise_error(ArgumentError, "File name cannot be empty")
+        expect { Rbgithook.validate_file_name(nil) }.to raise_error(ArgumentError, "File name cannot be empty")
+      end
+
+      it "should allow valid file names" do
+        expect { Rbgithook.validate_file_name("pre-commit") }.not_to raise_error
+        expect { Rbgithook.validate_file_name("pre_push") }.not_to raise_error
+        expect { Rbgithook.validate_file_name("commit-msg") }.not_to raise_error
+      end
     end
 
-    it "should raise error for invalid file name characters" do
-      expect { Rbgithook.validate_arguments("file@name", "rubocop") }.to raise_error(ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores")
-      expect { Rbgithook.validate_arguments("file name", "rubocop") }.to raise_error(ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores")
+    describe ".validate_hook_command" do
+      it "should raise error for empty hook command" do
+        expect { Rbgithook.validate_hook_command("") }.to raise_error(ArgumentError, "Hook command cannot be empty")
+        expect { Rbgithook.validate_hook_command(nil) }.to raise_error(ArgumentError, "Hook command cannot be empty")
+      end
+
+      it "should allow valid hook commands" do
+        expect { Rbgithook.validate_hook_command("rubocop -a") }.not_to raise_error
+        expect { Rbgithook.validate_hook_command("bundle exec rspec") }.not_to raise_error
+      end
     end
 
-    it "should raise error for empty hook command" do
-      expect { Rbgithook.validate_arguments("pre-commit", "") }.to raise_error(ArgumentError, "Hook command cannot be empty")
-      expect { Rbgithook.validate_arguments("pre-commit", nil) }.to raise_error(ArgumentError, "Hook command cannot be empty")
-    end
-
-    it "should raise error for dangerous characters in hook command" do
-      expect { Rbgithook.validate_arguments("pre-commit", "rm -rf /; echo safe") }.to raise_error(ArgumentError, /Hook command contains potentially dangerous characters/)
-      expect { Rbgithook.validate_arguments("pre-commit", "echo `whoami`") }.to raise_error(ArgumentError, /Hook command contains potentially dangerous characters/)
-      expect { Rbgithook.validate_arguments("pre-commit", "command && rm -rf /") }.to raise_error(ArgumentError, /Hook command contains potentially dangerous characters/)
-    end
-
-    it "should raise error for multiline commands" do
-      expect { Rbgithook.validate_arguments("pre-commit", "rubocop\nrm -rf /") }.to raise_error(ArgumentError, "Hook command cannot contain newline characters")
-      expect { Rbgithook.validate_arguments("pre-commit", "rubocop\r\nrm -rf /") }.to raise_error(ArgumentError, "Hook command cannot contain newline characters")
-    end
-
-    it "should allow valid arguments" do
-      expect { Rbgithook.validate_arguments("pre-commit", "rubocop -a") }.not_to raise_error
-      expect { Rbgithook.validate_arguments("pre_push", "bundle exec rspec") }.not_to raise_error
-      expect { Rbgithook.validate_arguments("commit-msg", "echo testing") }.not_to raise_error
-    end
-  end
-
-  describe ".sanitize_hook_command" do
+    describe ".sanitize_hook_command" do
     it "should remove dangerous shell metacharacters" do
       expect(Rbgithook.sanitize_hook_command("echo `whoami`")).to eq("echo whoami")
       expect(Rbgithook.sanitize_hook_command("echo $USER")).to eq("echo USER")

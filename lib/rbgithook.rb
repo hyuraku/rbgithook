@@ -42,36 +42,33 @@ module Rbgithook
   end
 
   def self.validate_arguments(file_name, hook_command)
-    # Validate file name
-    if file_name.nil? || file_name.empty?
-      raise ArgumentError, "File name cannot be empty"
-    end
+    validate_file_name(file_name)
+    validate_hook_command(hook_command)
+  end
 
-    # Prevent path traversal attacks
+  def self.validate_file_name(file_name)
+    raise ArgumentError, "File name cannot be empty" if file_name.nil? || file_name.empty?
+
     if file_name.include?("..") || file_name.include?("/")
       raise ArgumentError, "File name cannot contain path separators or traversal patterns"
     end
 
-    # Only allow alphanumeric characters, hyphens, and underscores
-    unless file_name.match?(/\A[a-zA-Z0-9_-]+\z/)
-      raise ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores"
-    end
+    return if file_name.match?(/\A[a-zA-Z0-9_-]+\z/)
 
-    # Validate hook command
-    if hook_command.nil? || hook_command.empty?
-      raise ArgumentError, "Hook command cannot be empty"
-    end
+    raise ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores"
+  end
 
-    # Basic command injection prevention
+  def self.validate_hook_command(hook_command)
+    raise ArgumentError, "Hook command cannot be empty" if hook_command.nil? || hook_command.empty?
+
     dangerous_chars = [";", "&", "|", "`", "$", "(", ")", ">", "<", "&&", "||"]
     if dangerous_chars.any? { |char| hook_command.include?(char) }
-      raise ArgumentError, "Hook command contains potentially dangerous characters: #{dangerous_chars.join(', ')}"
+      raise ArgumentError, "Hook command contains potentially dangerous characters: #{dangerous_chars.join(", ")}"
     end
 
-    # Prevent multi-line commands that could contain hidden malicious code
-    if hook_command.include?("\n") || hook_command.include?("\r")
-      raise ArgumentError, "Hook command cannot contain newline characters"
-    end
+    return unless hook_command.include?("\n") || hook_command.include?("\r")
+
+    raise ArgumentError, "Hook command cannot contain newline characters"
   end
 
   def self.check_dir_existence
@@ -83,12 +80,12 @@ module Rbgithook
 
   def self.write_hook_to_file(file_name, hook_command, append: false)
     file_path = File.join(DIRNAME, file_name)
-    
+
     # Additional safety check: ensure the resolved path is still within DIRNAME
     unless File.expand_path(file_path).start_with?(File.expand_path(DIRNAME))
       raise ArgumentError, "Invalid file path: #{file_name}"
     end
-    
+
     mode = append ? "a" : "w"
     File.open(file_path, mode) do |file|
       file.write("#!/usr/bin/env sh\n\n") unless append
@@ -102,6 +99,6 @@ module Rbgithook
   def self.sanitize_hook_command(command)
     # Remove any potential shell metacharacters that passed basic validation
     # This is a defense-in-depth measure
-    command.gsub(/[`$]/, '')
+    command.gsub(/[`$]/, "")
   end
 end
