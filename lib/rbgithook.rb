@@ -62,10 +62,41 @@ module Rbgithook
   def self.validate_file_name(file_name)
     raise ArgumentError, "File name cannot be empty" if file_name.nil? || file_name.empty?
 
-    if file_name.include?("..") || file_name.include?("/")
-      raise ArgumentError, "File name cannot contain path separators or traversal patterns"
-    end
+    check_path_traversal_patterns(file_name)
+    check_hidden_file_patterns(file_name)
+    check_control_characters(file_name)
+    check_allowed_characters(file_name)
+  end
 
+  def self.check_path_traversal_patterns(file_name)
+    dangerous_patterns = [
+      "..",           # Standard directory traversal
+      "/",            # Path separator
+      "\\",           # Windows path separator
+      "\0",           # Null byte injection
+      "%2e%2e",       # URL encoded ..
+      "%2f",          # URL encoded /
+      "%5c"           # URL encoded \
+    ]
+
+    dangerous_patterns.each do |pattern|
+      if file_name.downcase.include?(pattern)
+        raise ArgumentError, "File name contains dangerous path traversal pattern: #{pattern}"
+      end
+    end
+  end
+
+  def self.check_hidden_file_patterns(file_name)
+    return unless file_name.start_with?(".") && file_name != "." && file_name != ".."
+
+    raise ArgumentError, "File name cannot start with dot (hidden files not allowed)"
+  end
+
+  def self.check_control_characters(file_name)
+    raise ArgumentError, "File name cannot contain control characters" if file_name.match?(/[\x00-\x1f\x7f]/)
+  end
+
+  def self.check_allowed_characters(file_name)
     return if file_name.match?(/\A[a-zA-Z0-9_-]+\z/)
 
     raise ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores"
@@ -92,12 +123,13 @@ module Rbgithook
   end
 
   def self.write_hook_to_file(file_name, hook_command, append: false)
+    # Ensure .rbgithook directory exists and is secure
+    ensure_secure_directory
+
     file_path = File.join(DIRNAME, file_name)
 
-    # Additional safety check: ensure the resolved path is still within DIRNAME
-    unless File.expand_path(file_path).start_with?(File.expand_path(DIRNAME))
-      raise ArgumentError, "Invalid file path: #{file_name}"
-    end
+    # Multiple layers of path validation
+    validate_secure_file_path(file_path, file_name)
 
     mode = append ? "a" : "w"
     File.open(file_path, mode) do |file|
@@ -107,6 +139,34 @@ module Rbgithook
       file.write("#{escaped_command}\n")
     end
     FileUtils.chmod(0o755, file_path)
+  end
+
+  def self.ensure_secure_directory
+    return if Dir.exist?(DIRNAME)
+
+    # Create directory with secure permissions
+    FileUtils.mkdir_p(DIRNAME)
+    FileUtils.chmod(0o755, DIRNAME)
+  end
+
+  def self.validate_secure_file_path(file_path, original_name)
+    # Ensure the path stays within our designated directory
+    expanded_file_path = File.expand_path(file_path)
+    expanded_dirname = File.expand_path(DIRNAME)
+
+    unless expanded_file_path.start_with?(expanded_dirname + File::SEPARATOR) || expanded_file_path == expanded_dirname
+      raise ArgumentError, "Security violation: file path '#{original_name}' resolves outside designated directory"
+    end
+
+    # Additional check: ensure no symlink traversal
+    if File.symlink?(File.dirname(file_path)) || (File.exist?(file_path) && File.symlink?(file_path))
+      raise ArgumentError, "Security violation: symbolic links not allowed in hook paths"
+    end
+
+    # Verify the final component matches our validated name
+    return if File.basename(file_path) == original_name
+
+    raise ArgumentError, "Security violation: path manipulation detected"
   end
 
   def self.sanitize_hook_command(command)
