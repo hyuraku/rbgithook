@@ -56,8 +56,8 @@ RSpec.describe Rbgithook do
       end
 
       it "should raise error for path traversal attempts" do
-        expect { Rbgithook.validate_arguments("../evil", "rubocop") }.to raise_error(ArgumentError, "File name cannot contain path separators or traversal patterns")
-        expect { Rbgithook.validate_arguments("path/traversal", "rubocop") }.to raise_error(ArgumentError, "File name cannot contain path separators or traversal patterns")
+        expect { Rbgithook.validate_arguments("../evil", "rubocop") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
+        expect { Rbgithook.validate_arguments("path/traversal", "rubocop") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
       end
 
       it "should raise error for invalid file name characters" do
@@ -94,10 +94,44 @@ RSpec.describe Rbgithook do
         expect { Rbgithook.validate_file_name(nil) }.to raise_error(ArgumentError, "File name cannot be empty")
       end
 
+      it "should raise error for path traversal patterns" do
+        expect { Rbgithook.validate_file_name("../evil") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
+        expect { Rbgithook.validate_file_name("path/traversal") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
+        expect { Rbgithook.validate_file_name("path\\traversal") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
+      end
+
+      it "should raise error for URL encoded path traversal" do
+        expect { Rbgithook.validate_file_name("file%2e%2e") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
+        expect { Rbgithook.validate_file_name("file%2ftraversal") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
+        expect { Rbgithook.validate_file_name("file%5ctraversal") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
+      end
+
+      it "should raise error for null byte injection" do
+        expect { Rbgithook.validate_file_name("file\0name") }.to raise_error(ArgumentError, /dangerous path traversal pattern/)
+      end
+
+      it "should raise error for hidden files" do
+        expect { Rbgithook.validate_file_name(".hidden") }.to raise_error(ArgumentError, "File name cannot start with dot (hidden files not allowed)")
+        expect { Rbgithook.validate_file_name(".bashrc") }.to raise_error(ArgumentError, "File name cannot start with dot (hidden files not allowed)")
+      end
+
+      it "should raise error for control characters" do
+        expect { Rbgithook.validate_file_name("file\x01name") }.to raise_error(ArgumentError, "File name cannot contain control characters")
+        expect { Rbgithook.validate_file_name("file\x7fname") }.to raise_error(ArgumentError, "File name cannot contain control characters")
+      end
+
+      it "should raise error for invalid characters" do
+        expect { Rbgithook.validate_file_name("file@name") }.to raise_error(ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores")
+        expect { Rbgithook.validate_file_name("file name") }.to raise_error(ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores")
+        expect { Rbgithook.validate_file_name("file$name") }.to raise_error(ArgumentError, "File name can only contain alphanumeric characters, hyphens, and underscores")
+      end
+
       it "should allow valid file names" do
         expect { Rbgithook.validate_file_name("pre-commit") }.not_to raise_error
         expect { Rbgithook.validate_file_name("pre_push") }.not_to raise_error
         expect { Rbgithook.validate_file_name("commit-msg") }.not_to raise_error
+        expect { Rbgithook.validate_file_name("hook123") }.not_to raise_error
+        expect { Rbgithook.validate_file_name("HOOK_NAME") }.not_to raise_error
       end
     end
 
@@ -124,6 +158,11 @@ RSpec.describe Rbgithook do
   describe ".write_hook_to_file" do
     let(:file_path) { File.join(".rbgithook", "pre-commit") }
 
+    before do
+      allow(Rbgithook).to receive(:ensure_secure_directory)
+      allow(Rbgithook).to receive(:validate_secure_file_path)
+    end
+
     it "should write hook to file in write mode" do
       expect(File).to receive(:open).with(file_path, "w").and_yield(double("file").as_null_object)
       Rbgithook.write_hook_to_file("pre-commit", "rubocop")
@@ -134,8 +173,48 @@ RSpec.describe Rbgithook do
       Rbgithook.write_hook_to_file("pre-commit", "rubocop", append: true)
     end
 
-    it "should prevent path traversal in file writing" do
-      expect { Rbgithook.write_hook_to_file("../../../etc/passwd", "malicious") }.to raise_error(ArgumentError, /Invalid file path/)
+    it "should call security validation methods" do
+      allow(File).to receive(:open).and_yield(double("file").as_null_object)
+      
+      expect(Rbgithook).to receive(:ensure_secure_directory)
+      expect(Rbgithook).to receive(:validate_secure_file_path).with(file_path, "pre-commit")
+      
+      Rbgithook.write_hook_to_file("pre-commit", "rubocop")
+    end
+  end
+
+  describe ".validate_secure_file_path" do
+    let(:safe_path) { File.join(".rbgithook", "pre-commit") }
+    let(:dangerous_path) { File.join(".rbgithook", "../../../etc/passwd") }
+
+    it "should allow safe paths within directory" do
+      expect { Rbgithook.validate_secure_file_path(safe_path, "pre-commit") }.not_to raise_error
+    end
+
+    it "should reject paths that resolve outside directory" do
+      expect { Rbgithook.validate_secure_file_path(dangerous_path, "../../../etc/passwd") }.to raise_error(ArgumentError, /Security violation.*resolves outside designated directory/)
+    end
+
+    it "should reject symbolic links" do
+      allow(File).to receive(:symlink?).with(File.dirname(safe_path)).and_return(true)
+      expect { Rbgithook.validate_secure_file_path(safe_path, "pre-commit") }.to raise_error(ArgumentError, /Security violation.*symbolic links not allowed/)
+    end
+  end
+
+  describe ".ensure_secure_directory" do
+    it "should create directory if it does not exist" do
+      allow(Dir).to receive(:exist?).with(".rbgithook").and_return(false)
+      expect(FileUtils).to receive(:mkdir_p).with(".rbgithook")
+      expect(FileUtils).to receive(:chmod).with(0o755, ".rbgithook")
+      
+      Rbgithook.ensure_secure_directory
+    end
+
+    it "should not create directory if it already exists" do
+      allow(Dir).to receive(:exist?).with(".rbgithook").and_return(true)
+      expect(FileUtils).not_to receive(:mkdir_p)
+      
+      Rbgithook.ensure_secure_directory
     end
   end
 end

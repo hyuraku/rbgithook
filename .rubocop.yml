@@ -1,6 +1,6 @@
 AllCops:
   TargetRubyVersion: 2.6
-  new_cops: enable
+  NewCops: enable
   Exclude:
     - 'spec/**/*'
 
@@ -23,6 +23,9 @@ Metrics/MethodLength:
 
 Metrics/AbcSize:
   Max: 30
+
+Metrics/ModuleLength:
+  Max: 150
 
 Style/Documentation:
   Enabled: false
